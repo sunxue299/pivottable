@@ -1,5 +1,5 @@
 /*
- * pivotUI
+ * pivotUI 主要方法
  * pivot
  * pivotTableRenderer最终生成table的方法
  * pivotUtilities
