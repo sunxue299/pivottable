@@ -1,11 +1,40 @@
 /*
- * pivotUI 主要方法
+ * pivotUI
  * pivot
  * pivotTableRenderer最终生成table的方法
- * pivotUtilities
- * PivotData
- * derivers
- * locales
+ * derivedAttributes: {},//增加派生属性
+	aggregators: locales[locale].aggregators,//下拉列表中聚合函数的生成器词典
+	renderers: locales[locale].renderers,//自定义左上角的选择表,热力图等
+	hiddenAttributes: [],//包含要从UI中忽略的属性名
+	hiddenFromAggregators: [],//包含要从聚合器参数下拉列表中忽略的属性名称
+	hiddenFromDragDrop: [],//从拖放中隐藏字段
+	menuLimit: 500,//双击菜单中列出的最大值数 就是过滤中最多显示多少，再多就提示"数据过多无法列出"
+	cols: [],//要在cols区域中预填充的属性名 初始显示的列
+	rows: [],//要在rows区域中预填充的属性名 初始显示的行
+	vals: [],//要在val区域中预填充的属性名（传递给聚合器生成函数）
+	rowOrder: "key_a_to_z",//提供给呈现程序的行数据的顺序必须是“key_a_a_z”、“value_a_z_z”、“value_z_a”，按行总数的值顺序排序
+	colOrder: "key_a_to_z",//向呈现程序提供列数据的顺序必须是“key_au-to_auz”、“value_au-to_auz”、“value_au-z-to_a”，按列总数的值顺序排序
+	dataClass: PivotData,//要生成并传递给呈现程序的数据类的构造函数（应该是默认的子类）
+	exclusions: {},//排除 对象的键是属性名称，值是表示要从呈现中排除的记录的属性值数组；用于预填充双击时出现的筛选菜单 如:exclusions:{"订单金额":["50000"]},
+	inclusions: {},//包含
+	unusedAttrsVertical: 85,//boolean或int 控制是否垂直显示未使用的属性，而不是水平显示的默认属性。true的意思总是垂直的，false的意思总是水平的。如果设置为数字（默认设置），则如果属性“名称”的字符组合长度超过数字，则属性将垂直显示
+	autoSortUnusedAttrs: false,//自动排序未使用的属性
+	onRefresh: null,
+	showUI: true,//控制是否显示拖放用户界面。设置为false可使用pivotUI（）签名模拟pivot（）的行为。
+	filter: function() {//对每个记录调用，如果要在呈现之前从输入中排除该记录，则返回false，否则返回true
+		return true;
+	},
+	sorters: {}//对象或函数  使用属性名访问或调用，并可以返回一个函数，该函数可以用作array.sort的参数以用于输出目的。如果没有返回任何函数，则默认的排序机制是内置的“自然排序”实现。用于对诸如月份名称之类的属性进行排序
+	numberFormatAttr:[] //sbw自己定义的，如：numberFormatAttr:["订单金额","预计分红"] 默认格式化为千分位保留2小数
+	percFormatAttr:[] //sbw自己定义的，如：percFormatAttr:["订单比例","分红比例"] 默认格式化为百分比保留2小数
+	
+	日期格式化使用方式 增加派生属性
+	derivers = $.pivotUtilities.derivers;
+	derivedAttributes: {
+					"格式化后的日期": derivers.dateFormat("日期","%y年%m月%d日")
+				},
+	//注意 原始列的格式一般为yyyy-mm-dd
+
  */
 (function() {
 	var callWithJQuery,
@@ -476,8 +505,8 @@
 				}
 			}
 		};
-		mthNamesEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-		dayNamesEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+		mthNamesEn = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"];
+		dayNamesEn = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
 		zeroPad = function(number) {
 			return ("0" + number).substr(-2, 2);
 		};
@@ -507,23 +536,23 @@
 					}
 					return formatString.replace(/%(.)/g, function(m, p) {
 						switch (p) {
-							case "y":
+							case "y"://年
 								return date["get" + utc + "FullYear"]();
-							case "m":
+							case "m"://月
 								return zeroPad(date["get" + utc + "Month"]() + 1);
-							case "n":
+							case "n"://月份中文
 								return mthNames[date["get" + utc + "Month"]()];
-							case "d":
+							case "d"://日
 								return zeroPad(date["get" + utc + "Date"]());
-							case "w":
+							case "w"://星期中文
 								return dayNames[date["get" + utc + "Day"]()];
-							case "x":
+							case "x"://一周内的第几天,星期一是1，星期六是6，星期日是0
 								return date["get" + utc + "Day"]();
-							case "H":
+							case "H"://时
 								return zeroPad(date["get" + utc + "Hours"]());
-							case "M":
+							case "M"://分
 								return zeroPad(date["get" + utc + "Minutes"]());
-							case "S":
+							case "S"://秒
 								return zeroPad(date["get" + utc + "Seconds"]());
 							default:
 								return "%" + p;
@@ -1089,9 +1118,9 @@
 					}
 					x = spanSize(rowKeys, parseInt(i), parseInt(j));
 					if (x !== -1) {
-						th = document.createElement("th");console.log(th)
+						th = document.createElement("th");
 						th.className = "pvtRowLabel";
-						th.innerHTML = txt;//textContent
+						th.innerHTML = txt=="null"?"":txt;//textContent
 						th.setAttribute("rowspan", x);
 						if (parseInt(j) === rowAttrs.length - 1 && colAttrs.length !== 0) {
 							th.setAttribute("colspan", 2);
@@ -1215,8 +1244,8 @@
 			result = null;
 			try {
 				pivotData = new opts.dataClass(input, opts);
-				pivotData.numberFormatAttr = opts.numberFormatAttr;//sbw自定义
-				pivotData.percFormatAttr = opts.percFormatAttr;//sbw自定义
+				pivotData.numberFormatAttr = opts.numberFormatAttr?opts.numberFormatAttr:[];//sbw自定义
+				pivotData.percFormatAttr = opts.percFormatAttr?opts.percFormatAttr:[];//sbw自定义
 				try {
 					result = opts.renderer(pivotData, opts.rendererOptions);
 				} catch (error) {
